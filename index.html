@@ -59,6 +59,60 @@ body{margin:0;background:#f6f8fb;color:#101828;font-family:Arial,Segoe UI,sans-s
       s.textContent = code;
       document.head.appendChild(s);
       await new Promise(r=>setTimeout(r,0));
+
+      // Limpieza global de datos importados desde Excel.
+      // Se ejecuta antes de cargar app.js para que TODOS los flujos
+      // de importación reciban los datos ya corregidos.
+      if(window.XLSX && typeof window.XLSX.read === 'function'){
+        const originalXLSXRead = window.XLSX.read;
+        const LIMPIAR_CODIGO_CBC = /C[oó]d\\.?\\s*CBC[\\s\\S]*?AA[\\w-]+/gi;
+
+        const limpiarTexto = (valor) => {
+          if(typeof valor !== 'string') return valor;
+          return valor
+            .replace(LIMPIAR_CODIGO_CBC, '')
+            .replace(/[ \\t]{2,}/g, ' ')
+            .replace(/^[ \\t]*[.\\-,:;|]+[ \\t]*/g, '')
+            .replace(/[ \\t]*[.\\-,:;|]+[ \\t]*$/g, '')
+            .trim();
+        };
+
+        const limpiarCelda = (celda) => {
+          if(!celda || typeof celda !== 'object') return;
+          if(typeof celda.v === 'string') celda.v = limpiarTexto(celda.v);
+          if(typeof celda.w === 'string') celda.w = limpiarTexto(celda.w);
+          if(typeof celda.h === 'string') celda.h = limpiarTexto(celda.h);
+        };
+
+        const limpiarWorkbook = (wb) => {
+          if(!wb || !wb.Sheets) return wb;
+
+          for(const nombre of (wb.SheetNames || [])){
+            const ws = wb.Sheets[nombre];
+            if(!ws) continue;
+
+            // Formato denso: !data contiene las filas y celdas.
+            if(Array.isArray(ws['!data'])){
+              for(const fila of ws['!data']){
+                if(Array.isArray(fila)){
+                  for(const celda of fila) limpiarCelda(celda);
+                }
+              }
+            }
+
+            // Formato normal: las celdas están indexadas por A1, B2, etc.
+            for(const clave of Object.keys(ws)){
+              if(!clave.startsWith('!')) limpiarCelda(ws[clave]);
+            }
+          }
+
+          return wb;
+        };
+
+        window.XLSX.read = function(data, opts){
+          return limpiarWorkbook(originalXLSXRead.call(this, data, opts));
+        };
+      }
     }
     if(pdfPath){
       const code = await zip.file(pdfPath).async('string');
