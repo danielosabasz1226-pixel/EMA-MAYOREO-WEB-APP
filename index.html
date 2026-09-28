@@ -65,13 +65,13 @@ body{margin:0;background:#f6f8fb;color:#101828;font-family:Arial,Segoe UI,sans-s
       // de importación reciban los datos ya corregidos.
       if(window.XLSX && typeof window.XLSX.read === 'function'){
         const originalXLSXRead = window.XLSX.read;
-        const LIMPIAR_CODIGO_CBC = /C[oó]d\\.?\\s*CBC[\\s\\S]*?AA[\\w-]+/gi;
+        const LIMPIAR_CODIGO_CBC = /C[oó]d\.?\s*CBC[\s\S]*?AA[\w-]+/gi;
 
         const limpiarTexto = (valor) => {
           if(typeof valor !== 'string') return valor;
           return valor
             .replace(LIMPIAR_CODIGO_CBC, '')
-            .replace(/[ \\t]{2,}/g, ' ')
+            .replace(/[ \t]{2,}/g, ' ')
             .replace(/^[ \\t]*[.\\-,:;|]+[ \\t]*/g, '')
             .replace(/[ \\t]*[.\\-,:;|]+[ \\t]*$/g, '')
             .trim();
