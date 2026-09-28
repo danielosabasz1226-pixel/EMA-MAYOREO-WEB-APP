@@ -122,6 +122,37 @@ body{margin:0;background:#f6f8fb;color:#101828;font-family:Arial,Segoe UI,sans-s
       await new Promise(r=>setTimeout(r,0));
     }
     await runJs(appPath);
+
+    // Compatibilidad del selector de archivos:
+    // EMA puede crear inputs dinámicamente. Quitamos filtros restrictivos
+    // para que el explorador muestre todos los formatos de Excel.
+    const prepararSelectoresExcel = () => {
+      document.querySelectorAll('input[type="file"]').forEach(input => {
+        input.removeAttribute('accept');
+        input.setAttribute(
+          'accept',
+          '.xls,.xlsx,.xlsb,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,*/*'
+        );
+      });
+    };
+
+    prepararSelectoresExcel();
+
+    document.addEventListener('click', (event) => {
+      const input = event.target?.closest?.('input[type="file"]');
+      if (input) {
+        input.removeAttribute('accept');
+        input.setAttribute(
+          'accept',
+          '.xls,.xlsx,.xlsb,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,*/*'
+        );
+      }
+    }, true);
+
+    new MutationObserver(prepararSelectoresExcel).observe(document.documentElement, {
+      subtree: true,
+      childList: true
+    });
   } catch(e) {
     showError(e);
   }
