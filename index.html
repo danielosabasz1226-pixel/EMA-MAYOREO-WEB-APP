@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="es-GT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0B4EA2">
+<title>EMA · Mayoreo</title>
+<style>
+body{margin:0;background:#f6f8fb;color:#101828;font-family:Arial,Segoe UI,sans-serif}
+#boot{min-height:100vh;display:grid;place-items:center;padding:24px;text-align:center}
+#boot strong{font-size:22px}#boot p{max-width:620px;line-height:1.5}
+#err{white-space:pre-wrap;color:#b42318;margin-top:10px}
+</style>
+</head>
+<body>
+<div id="boot"><div><strong>Cargando EMA…</strong><p>Espera un momento mientras se carga la aplicación.</p><div id="err"></div></div></div>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>
+(async()=>{
+  const ZIP_NAME = 'EMA-MAYOREO-WEB-12.0-FORMATO-IMPRESION-PRO-LETRAS-GRANDES%20%282%29.zip';
+  const showError = e => {
+    document.getElementById('err').textContent = 'No se pudo cargar EMA.\n' + (e?.message || e);
+    console.error(e);
+  };
+  try {
+    if(!window.JSZip) throw new Error('No se pudo cargar JSZip.');
+    const res = await fetch(ZIP_NAME, {cache:'no-store'});
+    if(!res.ok) throw new Error('No se encontró el archivo ZIP publicado en GitHub.');
+    const zip = await JSZip.loadAsync(await res.arrayBuffer());
+    const names = Object.keys(zip.files);
+    const find = suffix => names.find(n => !zip.files[n].dir && n.toLowerCase().endsWith('/'+suffix.toLowerCase())) || names.find(n => !zip.files[n].dir && n.toLowerCase()===suffix.toLowerCase());
+    const indexPath = find('index.html');
+    const cssPath = find('styles.css');
+    const appPath = find('app.js');
+    const xlsxPath = find('xlsx.full.min.js');
+    const pdfPath = find('jspdf.umd.min.js');
+    if(!indexPath || !cssPath || !appPath) throw new Error('Faltan archivos principales dentro del ZIP.');
+    const html = await zip.file(indexPath).async('string');
+    const doc = new DOMParser().parseFromString(html,'text/html');
+    document.title = doc.title || 'EMA · Mayoreo';
+    document.head.querySelectorAll('link[rel="icon"],link[rel="manifest"],link[rel="apple-touch-icon"]').forEach(e=>e.remove());
+    document.body.innerHTML = doc.body.innerHTML;
+
+    const css = await zip.file(cssPath).async('string');
+    const style = document.createElement('style');
+    style.textContent = css;
+    document.head.appendChild(style);
+
+    const runJs = async (path) => {
+      const code = await zip.file(path).async('string');
+      const s = document.createElement('script');
+      s.textContent = code;
+      document.body.appendChild(s);
+    };
+
+    if(xlsxPath){
+      const code = await zip.file(xlsxPath).async('string');
+      const s = document.createElement('script');
+      s.textContent = code;
+      document.head.appendChild(s);
+      await new Promise(r=>setTimeout(r,0));
+    }
+    if(pdfPath){
+      const code = await zip.file(pdfPath).async('string');
+      const s = document.createElement('script');
+      s.textContent = code;
+      document.head.appendChild(s);
+      await new Promise(r=>setTimeout(r,0));
+    }
+    await runJs(appPath);
+  } catch(e) {
+    showError(e);
+  }
+})();
+</script>
+</body>
+</html>
