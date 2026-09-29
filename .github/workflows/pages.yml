@@ -253,8 +253,7 @@ jobs:
 """
 
           if "cleanProductText" not in html:
-              html = html.replace("</body>", cleanup + "
-</body>")
+              html = html.replace("</body>", cleanup + "\\n</body>")
 
           # Evita el zoom automático del navegador y mejora el inicio en móvil.
           if 'name="viewport"' in html:
