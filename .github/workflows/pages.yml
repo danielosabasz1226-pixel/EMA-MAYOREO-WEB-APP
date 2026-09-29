@@ -1,4 +1,4 @@
-name: Publicar EMA limpio y estable
+name: EMA Web
 
 on:
   push:
@@ -11,18 +11,22 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: ema-pages
   cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Descargar repositorio
         uses: actions/checkout@v4
 
-      - name: Extraer aplicación original
+      - name: Preparar EMA original
         shell: bash
         run: |
           set -euo pipefail
@@ -43,23 +47,12 @@ jobs:
           rm -f site/ABRIR-EMA.bat
           find site -name '.DS_Store' -delete
 
-          test -s site/index.html
-          test -s site/app.js
-          test -s site/styles.css
-
-      - name: Aplicar ÚNICO cambio solicitado: ocultar código secundario
-        shell: bash
-        run: |
-          set -euo pipefail
-
           python3 - <<'PY'
           from pathlib import Path
 
           p = Path("site/app.js")
           s = p.read_text(encoding="utf-8")
 
-          # El código puede seguir existiendo internamente para no romper
-          # la lectura del Excel, pero nunca debe mostrarse en pedidos/facturas.
           s = s.replace(
               "codigo: item.code, descripcion: item.name,",
               "codigo: '', descripcion: item.name,"
@@ -70,59 +63,34 @@ jobs:
               "codigo: '',"
           )
 
-          old = """function formatItemRows(quote) {
-  return quote.items.map((item) => `
-    <tr>
-      <td>
-        ${esc(item.descripcion || '—')}
-        ${item.codigo ? `<span class="cod">Cód. ${esc(item.codigo)}</span>` : ''}
-      </td>
-      <td class="num">${Number(item.cantidad || 0).toLocaleString('es-GT', { maximumFractionDigits: 2 })}</td>
-      <td class="num">${money(item.precio)}</td>
-      <td class="num">${money(item.total)}</td>
-    </tr>`).join('');
-}
-"""
+          line = '        ${item.codigo ? `<span class="cod">Cód. ${esc(item.codigo)}</span>` : ''}'
+          if line not in s:
+              raise SystemExit("No encontré la línea exacta del código secundario.")
 
-          new = """function formatItemRows(quote) {
-  return quote.items.map((item) => `
-    <tr>
-      <td>${esc(item.descripcion || '—')}</td>
-      <td class="num">${Number(item.cantidad || 0).toLocaleString('es-GT', { maximumFractionDigits: 2 })}</td>
-      <td class="num">${money(item.precio)}</td>
-      <td class="num">${money(item.total)}</td>
-    </tr>`).join('');
-}
-"""
-
-          if old not in s:
-              raise SystemExit("No encontré el bloque original de la factura; se detiene para no romper EMA.")
-
-          s = s.replace(old, new, 1)
+          s = s.replace(line, "", 1)
 
           p.write_text(s, encoding="utf-8")
 
           css = Path("site/styles.css")
           c = css.read_text(encoding="utf-8")
           if ".cod { display: none !important; }" not in c:
-              c += "\n\n/* Código secundario: oculto en pantalla e impresión */\n.cod { display: none !important; }\n"
+              c += "\n.cod { display:none !important; }\n"
           css.write_text(c, encoding="utf-8")
           PY
 
           node --check site/app.js
+          test -s site/index.html
+          test -s site/app.js
+          test -s site/styles.css
+
+      - name: Configurar Pages
+        uses: actions/configure-pages@v5
 
       - name: Subir sitio
         uses: actions/upload-pages-artifact@v3
         with:
           path: site
 
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Publicar en GitHub Pages
+      - name: Publicar sitio
         id: deployment
         uses: actions/deploy-pages@v4
