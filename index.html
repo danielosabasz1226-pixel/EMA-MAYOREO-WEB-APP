@@ -35,6 +35,16 @@ body{margin:0;background:#f6f8fb;color:#101828;font-family:Arial,Segoe UI,sans-s
     const xlsxPath = find('xlsx.full.min.js');
     const pdfPath = find('jspdf.umd.min.js');
     if(!indexPath || !cssPath || !appPath) throw new Error('Faltan archivos principales dentro del ZIP.');
+    const cleanProductText = (value) => {
+      if (typeof value !== 'string') return value;
+      let text = value.replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
+      text = text.replace(/\s+Cód\.?\s*CBC\s*[-–—:]?\s*[^|;\n]*?\.[A-Z]{1,5}\d{4,}\s*$/i, '');
+      text = text.replace(/\s*[-–—]\s*[^|;\n]*?\.[A-Z]{1,5}\d{4,}\s*$/i, '');
+      text = text.replace(/\s*\(\s*[A-Z]{1,5}\d{4,}\s*\)\s*$/i, '');
+      text = text.replace(/\s*\(?[A-Z]{1,5}\d{4,}\)?\s*$/i, '');
+      return text.replace(/\s{2,}/g, ' ').trim();
+    };
+
     const html = await zip.file(indexPath).async('string');
     const doc = new DOMParser().parseFromString(html,'text/html');
     document.title = doc.title || 'EMA · Mayoreo';
@@ -67,15 +77,7 @@ body{margin:0;background:#f6f8fb;color:#101828;font-family:Arial,Segoe UI,sans-s
         const originalXLSXRead = window.XLSX.read;
         const LIMPIAR_CODIGO_CBC = /C[oó]d\.?\s*CBC[\s\S]*?AA[\w-]+/gi;
 
-        const limpiarTexto = (valor) => {
-          if(typeof valor !== 'string') return valor;
-          return valor
-            .replace(LIMPIAR_CODIGO_CBC, '')
-            .replace(/[ \t]{2,}/g, ' ')
-            .replace(/^[ \t]*[.\\-,:;|]+[ \t]*/g, '')
-            .replace(/[ \t]*[.\\-,:;|]+[ \t]*$/g, '')
-            .trim();
-        };
+        const limpiarTexto = (valor) => cleanProductText(valor);
 
         const limpiarCelda = (celda) => {
           if(!celda || typeof celda !== 'object') return;
@@ -123,6 +125,41 @@ body{margin:0;background:#f6f8fb;color:#101828;font-family:Arial,Segoe UI,sans-s
     }
     await runJs(appPath);
 
+    // Migración final de pedidos ya guardados: elimina códigos antiguos
+    // incluso cuando el usuario no vuelva a importar el Excel.
+    const migrarPedidosGuardados = () => {
+      try {
+        if (typeof state === 'undefined') return;
+        if (Array.isArray(state.quotes)) {
+          state.quotes.forEach(q => {
+            if (!Array.isArray(q.items)) return;
+            q.items.forEach(item => {
+              item.codigo = '';
+              item.descripcion = cleanProductText(item.descripcion || '');
+            });
+          });
+        }
+        if (Array.isArray(state.importHistory)) {
+          state.importHistory.forEach(entry => {
+            if (!Array.isArray(entry.preview)) return;
+            entry.preview.forEach(q => {
+              if (!Array.isArray(q.items)) return;
+              q.items.forEach(item => {
+                item.codigo = '';
+                item.descripcion = cleanProductText(item.descripcion || '');
+              });
+            });
+          });
+        }
+        if (typeof saveState === 'function') saveState();
+        if (typeof renderQuote === 'function') renderQuote();
+      } catch (err) {
+        console.warn('EMA: no se pudo migrar el estado guardado.', err);
+      }
+    };
+
+    setTimeout(migrarPedidosGuardados, 80);
+
     // Compatibilidad del selector de archivos:
     // EMA puede crear inputs dinámicamente. Quitamos filtros restrictivos
     // para que el explorador muestre todos los formatos de Excel.
@@ -137,6 +174,21 @@ body{margin:0;background:#f6f8fb;color:#101828;font-family:Arial,Segoe UI,sans-s
     };
 
     prepararSelectoresExcel();
+
+    const emaStyle = document.createElement('style');
+    emaStyle.textContent = `
+      .cod { display:none !important; }
+      @media (max-width:640px){
+        .invoice { width:100% !important; }
+        .items td:first-child { font-size: 1.05em; line-height:1.25; }
+        .items td, .items th { padding:7px 6px !important; }
+      }
+      @media print {
+        .cod { display:none !important; }
+      }
+    `;
+    document.head.appendChild(emaStyle);
+
 
     document.addEventListener('click', (event) => {
       const input = event.target?.closest?.('input[type="file"]');
