@@ -199,7 +199,7 @@ public class MainActivity extends Activity {
 
     private void loadHome(boolean fresh) {
         webView.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT);
-        webView.loadUrl(START_URL + "?v=20260929-4");
+        webView.loadUrl(START_URL + "?v=20260929-5");
     }
 
     private void reloadFresh() {
