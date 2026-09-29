@@ -24,7 +24,7 @@ import android.widget.Toast;
 public class MainActivity extends Activity {
     private static final int FILE_CHOOSER = 4101;
     private static final String START_URL =
-        "https://danielosabasz1226-pixel.github.io/EMA-MAYOREO-WEB-APP/";
+        "https://operadoredesistemas.github.io/EMA-MAYOREO-WEB-APP/";
 
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
@@ -203,7 +203,7 @@ public class MainActivity extends Activity {
             webView.clearHistory();
             webView.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
         }
-        webView.loadUrl(START_URL + "?v=20260929-ema");
+        webView.loadUrl(START_URL + "?v=20260929-3");
     }
 
     private void reloadFresh() {
