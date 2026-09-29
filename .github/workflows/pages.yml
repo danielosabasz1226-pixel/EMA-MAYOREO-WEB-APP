@@ -78,7 +78,7 @@ jobs:
                   "function formatItemRows(quote) {\n"
                   "  return quote.items.map((item) => " + bt + "\n"
                   "    <tr>\n"
-                  "      <td>" + dl + "{esc(item.descripcion || '—')}</td>\n"
+                  "      <td>" + dl + "{esc(cleanProductDescription(item.descripcion) || '—')}</td>\n"
                   "      <td class=\"num\">" + dl + "{Number(item.cantidad || 0).toLocaleString('es-GT', { maximumFractionDigits: 2 })}</td>\n"
                   "      <td class=\"num\">" + dl + "{money(item.precio)}</td>\n"
                   "      <td class=\"num\">" + dl + "{money(item.total)}</td>\n"
