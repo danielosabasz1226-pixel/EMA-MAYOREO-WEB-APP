@@ -1,0 +1,318 @@
+/* =========================================================
+   EMA ANDROID · UI MÓVIL DEDICADA
+   No cambia la lógica de EMA; solo adapta la presentación.
+========================================================= */
+html.ema-android,
+html.ema-android body {
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+html.ema-android {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overscroll-behavior-x: none;
+}
+
+body.ema-android,
+.ema-android body {
+  padding-bottom: env(safe-area-inset-bottom);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ema-android button,
+.ema-android .btn,
+.ema-android select,
+.ema-android input,
+.ema-android textarea {
+  touch-action: manipulation;
+}
+
+.ema-android .btn {
+  min-height: 46px;
+  border-radius: 10px;
+}
+
+.ema-android .btn.small {
+  min-height: 42px;
+}
+
+.ema-android .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: max(10px, env(safe-area-inset-top));
+}
+
+.ema-android .brand-block {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.ema-android .brand-copy {
+  min-width: 0;
+}
+
+.ema-android .brand-name,
+.ema-android .brand-sub,
+.ema-android .brand-meta {
+  overflow-wrap: anywhere;
+}
+
+.ema-android .header-tools {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.ema-android .header-tools .system-status {
+  display: none;
+}
+
+.ema-android .tabs {
+  position: sticky;
+  top: 74px;
+  z-index: 95;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 6px;
+  background: rgba(246, 248, 251, .97);
+  backdrop-filter: blur(10px);
+}
+
+.ema-android .tab {
+  min-height: 46px;
+  border-radius: 10px;
+  font-weight: 800;
+}
+
+.ema-android .shell {
+  width: 100%;
+  max-width: none;
+  padding: 10px 10px 28px;
+  box-sizing: border-box;
+}
+
+.ema-android .hero-row {
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.ema-android .hero-main h1 {
+  font-size: clamp(26px, 7vw, 36px);
+  line-height: 1.05;
+}
+
+.ema-android .hero-copy {
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.ema-android .hero-kpi {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ema-android .card {
+  border-radius: 14px;
+}
+
+.ema-android .import-panel {
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.ema-android .import-actions,
+.ema-android .toolbar-left,
+.ema-android .toolbar-right,
+.ema-android .history-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ema-android .import-actions .btn,
+.ema-android .toolbar-left .btn,
+.ema-android .toolbar-right .btn {
+  flex: 1 1 calc(50% - 8px);
+}
+
+.ema-android .toolbar,
+.ema-android .history-bar {
+  align-items: stretch;
+}
+
+.ema-android input[type="search"],
+.ema-android input[type="text"],
+.ema-android select {
+  min-height: 46px;
+  font-size: 16px;
+}
+
+.ema-android .quote-toolbar,
+.ema-android .seller-toolbar {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ema-android .quote-toolbar > *,
+.ema-android .seller-toolbar > * {
+  min-width: 0;
+}
+
+.ema-android .invoice-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 12px;
+}
+
+.ema-android .invoice {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.ema-android .items {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.ema-android .items th,
+.ema-android .items td {
+  padding: 8px 6px;
+  font-size: 11px;
+}
+
+.ema-android .items th:first-child,
+.ema-android .items td:first-child {
+  width: 46%;
+}
+
+.ema-android .items th:nth-child(2),
+.ema-android .items td:nth-child(2) {
+  width: 15%;
+}
+
+.ema-android .items th:nth-child(3),
+.ema-android .items td:nth-child(3) {
+  width: 19%;
+}
+
+.ema-android .items th:nth-child(4),
+.ema-android .items td:nth-child(4) {
+  width: 20%;
+}
+
+.ema-android .items td:first-child {
+  font-size: 12px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.ema-android .meta th,
+.ema-android .meta td {
+  padding: 7px 6px;
+  font-size: 10px;
+}
+
+.ema-android .invoice-preview-bg,
+.ema-android .seller-preview-bg,
+.ema-android .modal-bg {
+  padding: 8px;
+}
+
+.ema-android .invoice-preview-modal,
+.ema-android .modal {
+  width: 100%;
+  max-width: none;
+  max-height: calc(100dvh - 16px);
+  overflow: auto;
+  border-radius: 14px;
+}
+
+.ema-android .invoice-preview-frame {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  max-height: 60dvh;
+}
+
+.ema-android .modal-actions,
+.ema-android .seller-preview-nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ema-android .modal-actions .btn,
+.ema-android .seller-preview-nav .btn {
+  flex: 1 1 calc(50% - 8px);
+}
+
+.ema-android .toast {
+  left: 10px;
+  right: 10px;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  width: auto;
+  max-width: none;
+}
+
+.ema-android .cod {
+  display: none !important;
+}
+
+@media (max-width: 420px) {
+  .ema-android .brand-monogram {
+    display: none;
+  }
+
+  .ema-android .brand-name {
+    font-size: 12px;
+  }
+
+  .ema-android .brand-sub,
+  .ema-android .brand-meta {
+    font-size: 10px;
+  }
+
+  .ema-android .header-tools .btn {
+    padding-inline: 8px;
+    font-size: 11px;
+  }
+
+  .ema-android .items th,
+  .ema-android .items td {
+    font-size: 10px;
+  }
+
+  .ema-android .items td:first-child {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 360px) {
+  .ema-android .header-tools .btn {
+    font-size: 10px;
+  }
+
+  .ema-android .import-actions .btn,
+  .ema-android .toolbar-left .btn,
+  .ema-android .toolbar-right .btn {
+    flex-basis: 100%;
+  }
+}
+
+@media print {
+  .ema-android .cod {
+    display: none !important;
+  }
+}
