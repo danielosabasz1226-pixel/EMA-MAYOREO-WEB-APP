@@ -1,0 +1,50 @@
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+.cod {
+  display: none !important;
+}
+
+@media (max-width: 640px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  .invoice-wrap {
+    width: 100% !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .invoice {
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+
+  .items {
+    width: 100% !important;
+    table-layout: fixed;
+  }
+
+  .items td,
+  .items th {
+    padding: 7px 6px !important;
+  }
+
+  .items td:first-child {
+    font-size: 1.04em;
+    line-height: 1.25;
+  }
+
+  .btn {
+    min-height: 44px;
+  }
+}
+
+@media print {
+  .cod {
+    display: none !important;
+  }
+}
