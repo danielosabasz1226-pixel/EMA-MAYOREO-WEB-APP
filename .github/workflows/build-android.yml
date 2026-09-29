@@ -3,15 +3,8 @@ name: Compilar APK de EMA
 on:
   workflow_dispatch:
   push:
-    paths:
-      - 'app/**'
-      - 'build.gradle'
-      - 'settings.gradle'
-      - 'gradle.properties'
-      - 'android-mobile.css'
-      - 'android-mobile.js'
-      - 'EMA-MAYOREO-WEB-12.0-FORMATO-IMPRESION-PRO-LETRAS-GRANDES (2).zip'
-      - '.github/workflows/build-android.yml'
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -24,118 +17,13 @@ jobs:
       - name: Descargar código
         uses: actions/checkout@v4
 
-      - name: Preparar aplicación web local para Android
-        shell: bash
-        run: |
-          set -euo pipefail
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
-          ZIP="$(find . -maxdepth 1 -type f -iname '*EMA-MAYOREO-WEB*.zip' -print -quit)"
-          test -n "$ZIP"
-
-          rm -rf android-web app/src/main/assets/ema
-          mkdir -p android-web app/src/main/assets/ema
-
-          unzip -q "$ZIP" -d android-web
-
-          INDEX="$(find android-web -type f -name index.html -print -quit)"
-          test -n "$INDEX"
-          ROOT_DIR="$(dirname "$INDEX")"
-
-          cp -a "$ROOT_DIR"/. app/src/main/assets/ema/
-          cp android-mobile.css app/src/main/assets/ema/android-mobile.css
-          cp android-mobile.js app/src/main/assets/ema/android-mobile.js
-
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          index = Path("app/src/main/assets/ema/index.html")
-          html = index.read_text(encoding="utf-8")
-
-          html = html.replace(
-              '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
-              '<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">'
-          )
-
-          if 'name="mobile-web-app-capable"' not in html:
-              html = html.replace(
-                  '<meta name="theme-color" content="#0B4EA2">',
-                  '<meta name="theme-color" content="#0B4EA2">\n  <meta name="mobile-web-app-capable" content="yes">'
-              )
-
-          if 'class="ema-android"' not in html:
-              html = html.replace('<body>', '<body class="ema-android">', 1)
-
-          if 'href="android-mobile.css"' not in html:
-              html = html.replace(
-                  '<link rel="stylesheet" href="styles.css">',
-                  '<link rel="stylesheet" href="styles.css">\n  <link rel="stylesheet" href="android-mobile.css">'
-              )
-
-          if 'src="android-mobile.js"' not in html:
-              html = html.replace(
-                  '<script src="app.js" defer></script>',
-                  '<script src="app.js" defer></script>\n  <script src="android-mobile.js" defer></script>'
-              )
-
-          index.write_text(html, encoding="utf-8")
-
-          app = Path("app/src/main/assets/ema/app.js")
-          s = app.read_text(encoding="utf-8")
-
-          s = re.sub(
-              r'^\s*\$\{item\.codigo.*class="cod".*\}\s*$',
-              '',
-              s,
-              count=1,
-              flags=re.MULTILINE
-          )
-          s = s.replace(
-              'codigo: item.code, descripcion: item.name,',
-              "codigo: '', descripcion: item.name,"
-          )
-          s = s.replace(
-              'codigo: cleanText(item.codigo),',
-              "codigo: '',"
-          )
-
-          anchor = "  const printWindow = window.open('', '_blank', 'width=900,height=1000');"
-          bridge = """  if (window.AndroidBridge && typeof window.AndroidBridge.printHtml === 'function') {
-    window.AndroidBridge.printHtml(documentHtml);
-    return;
-  }
-
-"""
-          if anchor in s and 'window.AndroidBridge.printHtml(documentHtml);' not in s:
-              s = s.replace(anchor, bridge + anchor, 1)
-
-          bt = chr(96)
-          old_pdf = "  doc.save(" + bt + "Pedido_\${quote.numero}.pdf" + bt + ");"
-          new_pdf = """  const pdfFilename = """ + bt + """Pedido_\${quote.numero}.pdf""" + bt + """;
-  if (window.AndroidBridge && typeof window.AndroidBridge.saveBase64 === 'function') {
-    const dataUri = doc.output('datauristring');
-    const base64 = dataUri.slice(dataUri.indexOf(',') + 1);
-    window.AndroidBridge.saveBase64(pdfFilename, 'application/pdf', base64);
-  } else {
-    doc.save(pdfFilename);
-  }"""
-          if old_pdf in s and 'const pdfFilename' not in s:
-              s = s.replace(old_pdf, new_pdf, 1)
-
-          app.write_text(s, encoding="utf-8")
-
-          (Path("app/src/main/assets/ema") / "ANDROID-VERSION.txt").write_text(
-              "EMA Android 1.3 - modo local, móvil, sin 404",
-              encoding="utf-8"
-          )
-          PY
-
-          test -f app/src/main/assets/ema/index.html
-          test -f app/src/main/assets/ema/app.js
-          test -f app/src/main/assets/ema/styles.css
-          test -f app/src/main/assets/ema/android-mobile.css
-          test -f app/src/main/assets/ema/android-mobile.js
-          node --check app/src/main/assets/ema/app.js
+      - name: Preparar EMA Android local
+        run: python3 android_prepare.py
 
       - name: Configurar Java 17
         uses: actions/setup-java@v6
