@@ -26,7 +26,7 @@ jobs:
       - name: Descargar repositorio
         uses: actions/checkout@v4
 
-      - name: Preparar EMA original
+      - name: Extraer EMA original
         shell: bash
         run: |
           set -euo pipefail
@@ -47,38 +47,45 @@ jobs:
           rm -f site/ABRIR-EMA.bat
           find site -name '.DS_Store' -delete
 
+      - name: Eliminar SOLO el segundo código de cada producto
+        shell: bash
+        run: |
+          set -euo pipefail
+
           python3 - <<'PY'
           from pathlib import Path
-          import re
 
           p = Path("site/app.js")
           s = p.read_text(encoding="utf-8")
 
-          s = s.replace(
-              "codigo: item.code, descripcion: item.name,",
-              "codigo: '', descripcion: item.name,"
-          )
+          # Este es EXACTAMENTE el segundo renglón que aparece debajo
+          # de cada producto. Se elimina de la interfaz, sin tocar
+          # los botones, Excel, pedidos ni el resto de EMA.
+          needle = """        ${item.codigo ? `<span class="cod">Cód. ${esc(item.codigo)}</span>` : ''}
+"""
 
-          s = s.replace(
-              "codigo: cleanText(item.codigo),",
-              "codigo: '',"
-          )
+          count = s.count(needle)
+          if count != 1:
+              raise SystemExit(f"No encontré exactamente 1 renglón de código secundario; encontré {count}.")
 
-          pattern = r'^\s*\$\{item\.codigo.*class="cod".*\}\s*$'
-          s, removed = re.subn(pattern, '', s, count=1, flags=re.MULTILINE)
-          if removed != 1:
-              raise SystemExit("No encontré el renglón del código secundario.")
+          s = s.replace(needle, "", 1)
 
+          # También evitamos que el código secundario vuelva a aparecer
+          # por estilos antiguos en pantalla o impresión.
           p.write_text(s, encoding="utf-8")
 
           css = Path("site/styles.css")
           c = css.read_text(encoding="utf-8")
-          if ".cod { display: none !important; }" not in c:
+          if ".cod" not in c:
               c += "\n.cod { display:none !important; }\n"
           css.write_text(c, encoding="utf-8")
+
+          print("Código secundario eliminado correctamente.")
           PY
 
           node --check site/app.js
+          grep -Rni 'class="cod"' site/app.js || true
+
           test -s site/index.html
           test -s site/app.js
           test -s site/styles.css
