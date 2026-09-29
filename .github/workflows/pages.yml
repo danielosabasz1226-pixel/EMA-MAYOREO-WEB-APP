@@ -21,161 +21,21 @@ jobs:
       - name: Descargar repositorio
         uses: actions/checkout@v4
 
-      - name: Extraer aplicación EMA
+      - name: Preparar sitio EMA
         shell: bash
         run: |
           set -euo pipefail
           ZIP="$(find . -maxdepth 1 -type f -name '*.zip' -print -quit)"
           test -n "$ZIP"
+
           rm -rf site
           mkdir -p site
-          unzip -q "$ZIP" -d extracted
 
-          INDEX="$(find extracted -type f -name 'index.html' -print -quit)"
-          test -n "$INDEX"
-
-          APP_DIR="$(dirname "$INDEX")"
-          cp -a "$APP_DIR"/. site/
+          cp index.html site/index.html
+          cp "$ZIP" "site/EMA-MAYOREO-WEB-12.0-FORMATO-IMPRESION-PRO-LETRAS-GRANDES (2).zip"
 
           test -f site/index.html
-          test -f site/app.js
-          test -f site/styles.css
-
-          rm -f site/ABRIR-EMA.bat
-          find site -name '.DS_Store' -delete
-
-      - name: Corregir códigos y mejorar móvil
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-
-          app = Path("site/app.js")
-          s = app.read_text(encoding="utf-8")
-
-          helper = r"""
-function cleanProductDescription(value) {
-  let text = cleanText(value);
-  if (!text) return '';
-  text = text.replace(/\s+Cód\.?\s*CBC\s*[-–—:]?\s*[^|;\n]*?\.[A-Z]{1,5}\d{4,}\s*$/i, '');
-  text = text.replace(/\s*[-–—]\s*[^|;\n]*?\.[A-Z]{1,5}\d{4,}\s*$/i, '');
-  text = text.replace(/\s*\(\s*[A-Z]{1,5}\d{4,}\s*\)\s*$/i, '');
-  text = text.replace(/\s*\(?[A-Z]{1,5}\d{4,}\)?\s*$/i, '');
-  return text.replace(/\s{2,}/g, ' ').trim();
-}
-"""
-          if "function cleanProductDescription(value)" not in s:
-              s = s.replace("function splitParty(value) {", helper + "\nfunction splitParty(value) {", 1)
-
-          s = s.replace("const DB_VERSION = 1;", "const DB_VERSION = 2;")
-          s = s.replace("codigo: item.code, descripcion: item.name,", "codigo: '', descripcion: cleanProductDescription(item.name),")
-          s = s.replace(
-              "const description = columns.desc >= 0 ? cleanText(row[columns.desc]) : '';",
-              "const description = columns.desc >= 0 ? cleanProductDescription(row[columns.desc]) : '';"
-          )
-          s = s.replace(
-              "const description = item.descripcion || '—';",
-              "const description = cleanProductDescription(item.descripcion) || '—';"
-          )
-          s = s.replace(
-              "codigo: cleanText(item.codigo),\n          descripcion: cleanText(item.descripcion),",
-              "codigo: '',\n          descripcion: cleanProductDescription(item.descripcion),"
-          )
-
-          bt = chr(96)
-          dl = chr(36)
-          start = s.find("function formatItemRows(quote) {")
-          end = s.find("function invoice(quote)", start)
-          if start >= 0 and end >= 0:
-              new_block = (
-                  "function formatItemRows(quote) {\n"
-                  "  return quote.items.map((item) => " + bt + "\n"
-                  "    <tr>\n"
-                  "      <td>" + dl + "{esc(cleanProductDescription(item.descripcion) || '—')}</td>\n"
-                  "      <td class=\"num\">" + dl + "{Number(item.cantidad || 0).toLocaleString('es-GT', { maximumFractionDigits: 2 })}</td>\n"
-                  "      <td class=\"num\">" + dl + "{money(item.precio)}</td>\n"
-                  "      <td class=\"num\">" + dl + "{money(item.total)}</td>\n"
-                  "    </tr>" + bt + ").join('');\n"
-                  "}\n"
-              )
-              s = s[:start] + new_block + s[end:]
-
-          app.write_text(s, encoding="utf-8")
-
-          css = Path("site/styles.css")
-          c = css.read_text(encoding="utf-8")
-          mobile = r'''
-          /* =========================================================
-             MEJORAS MÓVILES EMA
-          ========================================================= */
-          html, body {
-            -webkit-text-size-adjust: 100%;
-            overscroll-behavior-x: none;
-          }
-          .cod { display: none !important; }
-          button, select, input { -webkit-tap-highlight-color: transparent; }
-          @media (max-width: 640px) {
-            body { overflow-x: hidden; }
-            .topbar { gap: 12px; }
-            .brand-block, .brand-copy { min-width: 0; }
-            .brand-name, .brand-sub, .brand-meta { overflow-wrap: anywhere; }
-            .tabs {
-              position: sticky;
-              top: 0;
-              z-index: 40;
-              background: rgba(255,255,255,.96);
-              backdrop-filter: blur(8px);
-            }
-            .toolbar-left, .toolbar-right {
-              display: flex;
-              flex-wrap: nowrap;
-              gap: 8px;
-              overflow-x: auto;
-              padding-bottom: 4px;
-              -webkit-overflow-scrolling: touch;
-            }
-            .toolbar-left > *, .toolbar-right > * { flex: 0 0 auto; }
-            .toolbar-left .btn, .toolbar-right .btn {
-              min-height: 44px;
-              white-space: nowrap;
-            }
-            .jump { min-width: 180px; flex: 0 0 auto; }
-            .import-actions .btn { min-height: 48px; }
-            .invoice-wrap {
-              width: 100%;
-              overflow-x: auto;
-              padding-bottom: 4px;
-              -webkit-overflow-scrolling: touch;
-            }
-            .invoice {
-              width: 100%;
-              min-width: 0;
-              box-sizing: border-box;
-            }
-            .items { table-layout: fixed; width: 100%; }
-            .items th:nth-child(n+2), .items td:nth-child(n+2) { white-space: nowrap; }
-            .meta, .items { font-size: 10px; }
-            .meta th, .meta td, .items th, .items td { padding: 7px 6px; }
-            .btn { min-height: 44px; }
-            .toast {
-              max-width: calc(100vw - 24px);
-              left: 12px;
-              right: 12px;
-              bottom: 12px;
-            }
-          }
-          '''
-          if "MEJORAS MÓVILES EMA" not in c:
-              c += mobile
-          if ".cod { display: none !important; }" not in c:
-              c += "\n.cod { display: none !important; }\n"
-          css.write_text(c, encoding="utf-8")
-          PY
-
-          node --check site/app.js
-          test -f site/styles.css
-
+          test -s "site/EMA-MAYOREO-WEB-12.0-FORMATO-IMPRESION-PRO-LETRAS-GRANDES (2).zip"
 
       - name: Subir artefacto de Pages
         uses: actions/upload-pages-artifact@v3
@@ -192,4 +52,3 @@ function cleanProductDescription(value) {
       - name: Publicar en GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
