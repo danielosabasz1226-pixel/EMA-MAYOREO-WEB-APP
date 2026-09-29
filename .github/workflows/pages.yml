@@ -54,6 +54,20 @@ jobs:
           app = Path("site/app.js")
           s = app.read_text(encoding="utf-8")
 
+          helper = """
+function cleanProductDescription(value) {
+  let text = cleanText(value);
+  if (!text) return '';
+  text = text.replace(/\s+Cód\.?\s*CBC\s*[-–—:]?\s*[^|;\n]*?\.[A-Z]{1,5}\d{4,}\s*$/i, '');
+  text = text.replace(/\s*[-–—]\s*[^|;\n]*?\.[A-Z]{1,5}\d{4,}\s*$/i, '');
+  text = text.replace(/\s*\(\s*[A-Z]{1,5}\d{4,}\s*\)\s*$/i, '');
+  text = text.replace(/\s*\(?[A-Z]{1,5}\d{4,}\)?\s*$/i, '');
+  return text.replace(/\s{2,}/g, ' ').trim();
+}
+"""
+          if "function cleanProductDescription(value)" not in s:
+              s = s.replace("function splitParty(value) {", helper + "\nfunction splitParty(value) {", 1)
+
           s = s.replace("const DB_VERSION = 1;", "const DB_VERSION = 2;")
           s = s.replace("codigo: item.code, descripcion: item.name,", "codigo: '', descripcion: cleanProductDescription(item.name),")
           s = s.replace(
