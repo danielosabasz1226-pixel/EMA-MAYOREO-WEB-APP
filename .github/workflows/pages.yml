@@ -47,48 +47,32 @@ jobs:
           rm -f site/ABRIR-EMA.bat
           find site -name '.DS_Store' -delete
 
-      - name: Eliminar SOLO el segundo código de cada producto
+      - name: Quitar el segundo codigo de TODOS los productos
         shell: bash
         run: |
           set -euo pipefail
 
-          python3 - <<'PY'
-          from pathlib import Path
+          APP="site/app.js"
 
-          p = Path("site/app.js")
-          s = p.read_text(encoding="utf-8")
+          # No guardar el segundo código en nuevos registros.
+          sed -i "s/codigo: item\.code, descripcion: item\.name,/codigo: '', descripcion: item.name,/" "$APP"
+          sed -i "s/codigo: cleanText(item\.codigo),/codigo: '',/" "$APP"
 
-          # Este es EXACTAMENTE el segundo renglón que aparece debajo
-          # de cada producto. Se elimina de la interfaz, sin tocar
-          # los botones, Excel, pedidos ni el resto de EMA.
-          needle = """        ${item.codigo ? `<span class="cod">Cód. ${esc(item.codigo)}</span>` : ''}
-"""
+          # Eliminar el renglón visual "Cód. ..." de la factura.
+          BEFORE="$(grep -c 'class="cod"' "$APP" || true)"
+          test "$BEFORE" -ge 1
+          sed -i '/class="cod"/d' "$APP"
+          AFTER="$(grep -c 'class="cod"' "$APP" || true)"
+          test "$AFTER" -eq 0
 
-          count = s.count(needle)
-          if count != 1:
-              raise SystemExit(f"No encontré exactamente 1 renglón de código secundario; encontré {count}.")
+          node --check "$APP"
 
-          s = s.replace(needle, "", 1)
-
-          # También evitamos que el código secundario vuelva a aparecer
-          # por estilos antiguos en pantalla o impresión.
-          p.write_text(s, encoding="utf-8")
-
-          css = Path("site/styles.css")
-          c = css.read_text(encoding="utf-8")
-          if ".cod" not in c:
-              c += "\n.cod { display:none !important; }\n"
-          css.write_text(c, encoding="utf-8")
-
-          print("Código secundario eliminado correctamente.")
-          PY
-
-          node --check site/app.js
-          grep -Rni 'class="cod"' site/app.js || true
-
+          # Mantener el resto de EMA intacto.
           test -s site/index.html
           test -s site/app.js
           test -s site/styles.css
+
+          printf '%s\n' "Segundo código eliminado. Coincidencias restantes: $AFTER"
 
       - name: Configurar Pages
         uses: actions/configure-pages@v5
