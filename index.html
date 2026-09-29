@@ -125,9 +125,9 @@ body{margin:0;background:#f6f8fb;color:#101828;font-family:Arial,Segoe UI,sans-s
     }
     await runJs(appPath);
 
-    // Migración final de pedidos ya guardados: elimina códigos antiguos
-    // incluso cuando el usuario no vuelva a importar el Excel.
-    const migrarPedidosGuardados = () => {
+    // Barrera permanente: cualquier pedido que se renderice o se exporte
+    // se limpia justo antes de usarse, incluso si viene de datos antiguos.
+    const sanitizarEstadoEMA = () => {
       try {
         if (typeof state === 'undefined') return;
         if (Array.isArray(state.quotes)) {
@@ -152,13 +152,51 @@ body{margin:0;background:#f6f8fb;color:#101828;font-family:Arial,Segoe UI,sans-s
           });
         }
         if (typeof saveState === 'function') saveState();
-        if (typeof renderQuote === 'function') renderQuote();
       } catch (err) {
-        console.warn('EMA: no se pudo migrar el estado guardado.', err);
+        console.warn('EMA: no se pudo limpiar el estado.', err);
       }
     };
 
-    setTimeout(migrarPedidosGuardados, 80);
+    const protegerRenderYPDF = () => {
+      try {
+        sanitizarEstadoEMA();
+        if (typeof renderQuote === 'function' && !renderQuote.__emaSafe) {
+          const renderOriginal = renderQuote;
+          const renderSeguro = function() {
+            sanitizarEstadoEMA();
+            return renderOriginal.apply(this, arguments);
+          };
+          renderSeguro.__emaSafe = true;
+          renderQuote = renderSeguro;
+        }
+        if (typeof exportPdf === 'function' && !exportPdf.__emaSafe) {
+          const pdfOriginal = exportPdf;
+          const pdfSeguro = function(quote) {
+            sanitizarEstadoEMA();
+            const limpio = quote && typeof quote === 'object'
+              ? {
+                  ...quote,
+                  items: Array.isArray(quote.items)
+                    ? quote.items.map(item => ({
+                        ...item,
+                        codigo: '',
+                        descripcion: cleanProductText(item.descripcion || '')
+                      }))
+                    : []
+                }
+              : quote;
+            return pdfOriginal.call(this, limpio);
+          };
+          pdfSeguro.__emaSafe = true;
+          exportPdf = pdfSeguro;
+        }
+        if (typeof renderQuote === 'function') renderQuote();
+      } catch (err) {
+        console.warn('EMA: no se pudieron proteger vista y PDF.', err);
+      }
+    };
+
+    setTimeout(protegerRenderYPDF, 80);
 
     // Compatibilidad del selector de archivos:
     // EMA puede crear inputs dinámicamente. Quitamos filtros restrictivos
