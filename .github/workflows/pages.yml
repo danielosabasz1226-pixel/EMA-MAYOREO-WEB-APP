@@ -55,10 +55,18 @@ jobs:
           s = app.read_text(encoding="utf-8")
 
           s = s.replace("const DB_VERSION = 1;", "const DB_VERSION = 2;")
-          s = s.replace("codigo: item.code, descripcion: item.name,", "codigo: '', descripcion: item.name,")
+          s = s.replace("codigo: item.code, descripcion: item.name,", "codigo: '', descripcion: cleanProductDescription(item.name),")
+          s = s.replace(
+              "const description = columns.desc >= 0 ? cleanText(row[columns.desc]) : '';",
+              "const description = columns.desc >= 0 ? cleanProductDescription(row[columns.desc]) : '';"
+          )
+          s = s.replace(
+              "const description = item.descripcion || '—';",
+              "const description = cleanProductDescription(item.descripcion) || '—';"
+          )
           s = s.replace(
               "codigo: cleanText(item.codigo),\n          descripcion: cleanText(item.descripcion),",
-              "// El código de producto no se muestra ni se conserva en la interfaz.\n          codigo: '',\n          descripcion: cleanText(item.descripcion),"
+              "codigo: '',\n          descripcion: cleanProductDescription(item.descripcion),"
           )
 
           bt = chr(96)
@@ -146,6 +154,8 @@ jobs:
           '''
           if "MEJORAS MÓVILES EMA" not in c:
               c += mobile
+          if ".cod { display: none !important; }" not in c:
+              c += "\n.cod { display: none !important; }\n"
           css.write_text(c, encoding="utf-8")
           PY
 
@@ -168,3 +178,4 @@ jobs:
       - name: Publicar en GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
