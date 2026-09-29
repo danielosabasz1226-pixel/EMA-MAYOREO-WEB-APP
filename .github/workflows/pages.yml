@@ -1,4 +1,4 @@
-name: Publicar EMA rápido en GitHub Pages
+name: Publicar EMA limpio y estable
 
 on:
   push:
@@ -22,7 +22,7 @@ jobs:
       - name: Descargar repositorio
         uses: actions/checkout@v4
 
-      - name: Extraer aplicación EMA directamente
+      - name: Extraer aplicación original
         shell: bash
         run: |
           set -euo pipefail
@@ -32,7 +32,6 @@ jobs:
 
           rm -rf extracted site
           mkdir -p extracted site
-
           unzip -q "$ZIP" -d extracted
 
           INDEX="$(find extracted -type f -name 'index.html' -print -quit)"
@@ -41,21 +40,76 @@ jobs:
           APP_DIR="$(dirname "$INDEX")"
           cp -a "$APP_DIR"/. site/
 
-          test -f site/index.html
-          test -f site/app.js
-          test -f site/styles.css
-
-          cp ema-cleanup.js site/ema-cleanup.js
-          cp ema-mobile.css site/ema-mobile.css
-
-          sed -i 's#</head>#<link rel="stylesheet" href="ema-mobile.css"></head>#' site/index.html
-          sed -i 's#</body>#<script src="ema-cleanup.js"></script></body>#' site/index.html
-
           rm -f site/ABRIR-EMA.bat
           find site -name '.DS_Store' -delete
 
-          test -s site/ema-cleanup.js
-          test -s site/ema-mobile.css
+          test -s site/index.html
+          test -s site/app.js
+          test -s site/styles.css
+
+      - name: Aplicar ÚNICO cambio solicitado: ocultar código secundario
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("site/app.js")
+          s = p.read_text(encoding="utf-8")
+
+          # El código puede seguir existiendo internamente para no romper
+          # la lectura del Excel, pero nunca debe mostrarse en pedidos/facturas.
+          s = s.replace(
+              "codigo: item.code, descripcion: item.name,",
+              "codigo: '', descripcion: item.name,"
+          )
+
+          s = s.replace(
+              "codigo: cleanText(item.codigo),",
+              "codigo: '',"
+          )
+
+          old = """function formatItemRows(quote) {
+  return quote.items.map((item) => `
+    <tr>
+      <td>
+        ${esc(item.descripcion || '—')}
+        ${item.codigo ? `<span class="cod">Cód. ${esc(item.codigo)}</span>` : ''}
+      </td>
+      <td class="num">${Number(item.cantidad || 0).toLocaleString('es-GT', { maximumFractionDigits: 2 })}</td>
+      <td class="num">${money(item.precio)}</td>
+      <td class="num">${money(item.total)}</td>
+    </tr>`).join('');
+}
+"""
+
+          new = """function formatItemRows(quote) {
+  return quote.items.map((item) => `
+    <tr>
+      <td>${esc(item.descripcion || '—')}</td>
+      <td class="num">${Number(item.cantidad || 0).toLocaleString('es-GT', { maximumFractionDigits: 2 })}</td>
+      <td class="num">${money(item.precio)}</td>
+      <td class="num">${money(item.total)}</td>
+    </tr>`).join('');
+}
+"""
+
+          if old not in s:
+              raise SystemExit("No encontré el bloque original de la factura; se detiene para no romper EMA.")
+
+          s = s.replace(old, new, 1)
+
+          p.write_text(s, encoding="utf-8")
+
+          css = Path("site/styles.css")
+          c = css.read_text(encoding="utf-8")
+          if ".cod { display: none !important; }" not in c:
+              c += "\n\n/* Código secundario: oculto en pantalla e impresión */\n.cod { display: none !important; }\n"
+          css.write_text(c, encoding="utf-8")
+          PY
+
+          node --check site/app.js
 
       - name: Subir sitio
         uses: actions/upload-pages-artifact@v3
