@@ -1,7 +1,13 @@
-/* =========================================================
-   EMA ANDROID · UI MÓVIL DEDICADA
-   No cambia la lógica de EMA; solo adapta la presentación.
-========================================================= */
+/* EMA Android 1.4 · interfaz móvil dedicada */
+:root {
+  --ema-blue: #0b4ea2;
+  --ema-blue-dark: #07366f;
+  --ema-bg: #f4f7fb;
+  --ema-card: #ffffff;
+  --ema-text: #12233f;
+  --ema-muted: #667085;
+}
+
 html.ema-android,
 html.ema-android body {
   width: 100%;
@@ -15,46 +21,37 @@ html.ema-android {
   overscroll-behavior-x: none;
 }
 
-body.ema-android,
 .ema-android body {
-  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--ema-bg);
+  color: var(--ema-text);
+  padding-bottom: 92px;
   -webkit-tap-highlight-color: transparent;
 }
 
 .ema-android button,
 .ema-android .btn,
-.ema-android select,
 .ema-android input,
-.ema-android textarea {
+.ema-android select,
+.ema-android textarea,
+.ema-android label {
   touch-action: manipulation;
-}
-
-.ema-android .btn {
-  min-height: 46px;
-  border-radius: 10px;
-}
-
-.ema-android .btn.small {
-  min-height: 42px;
 }
 
 .ema-android .topbar {
   position: sticky;
   top: 0;
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-top: max(10px, env(safe-area-inset-top));
+  z-index: 80;
+  min-height: 0;
+  padding: 8px 10px;
+  gap: 8px;
+  background: linear-gradient(135deg, var(--ema-blue), var(--ema-blue-dark));
+  border: 0;
+  box-shadow: 0 4px 16px rgba(7, 54, 111, .18);
 }
 
 .ema-android .brand-block {
   min-width: 0;
   flex: 1 1 auto;
-}
-
-.ema-android .brand-copy {
-  min-width: 0;
 }
 
 .ema-android .brand-name,
@@ -64,76 +61,58 @@ body.ema-android,
 }
 
 .ema-android .header-tools {
-  flex: 0 0 auto;
   display: flex;
-  align-items: center;
-  gap: 6px;
   flex-wrap: nowrap;
+  gap: 4px;
 }
 
-.ema-android .header-tools .system-status {
-  display: none;
-}
-
-.ema-android .tabs {
-  position: sticky;
-  top: 74px;
-  z-index: 95;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  padding: 6px;
-  background: rgba(246, 248, 251, .97);
-  backdrop-filter: blur(10px);
-}
-
-.ema-android .tab {
-  min-height: 46px;
-  border-radius: 10px;
-  font-weight: 800;
+.ema-android .header-tools .btn {
+  min-width: 44px;
+  min-height: 44px;
+  padding-inline: 8px;
 }
 
 .ema-android .shell {
   width: 100%;
   max-width: none;
-  padding: 10px 10px 28px;
   box-sizing: border-box;
+  padding: 10px 10px 24px;
 }
 
 .ema-android .hero-row {
   grid-template-columns: 1fr;
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .ema-android .hero-main h1 {
-  font-size: clamp(26px, 7vw, 36px);
+  margin: 0;
+  font-size: clamp(24px, 7vw, 34px);
   line-height: 1.05;
 }
 
 .ema-android .hero-copy {
   font-size: 14px;
-  line-height: 1.45;
-}
-
-.ema-android .hero-kpi {
-  width: 100%;
-  box-sizing: border-box;
+  line-height: 1.4;
 }
 
 .ema-android .card {
-  border-radius: 14px;
+  border-radius: 16px;
+  border: 1px solid #e1e8f0;
+  box-shadow: 0 3px 14px rgba(16, 24, 40, .06);
 }
 
 .ema-android .import-panel {
   grid-template-columns: 1fr;
-  gap: 12px;
+  gap: 10px;
 }
 
 .ema-android .import-actions,
 .ema-android .toolbar-left,
 .ema-android .toolbar-right,
-.ema-android .history-bar {
+.ema-android .history-bar,
+.ema-android .quote-toolbar,
+.ema-android .seller-toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -141,31 +120,43 @@ body.ema-android,
 
 .ema-android .import-actions .btn,
 .ema-android .toolbar-left .btn,
-.ema-android .toolbar-right .btn {
+.ema-android .toolbar-right .btn,
+.ema-android .quote-toolbar .btn,
+.ema-android .seller-toolbar .btn {
   flex: 1 1 calc(50% - 8px);
+  min-height: 48px;
+  border-radius: 12px;
+  font-weight: 800;
 }
 
-.ema-android .toolbar,
-.ema-android .history-bar {
-  align-items: stretch;
-}
-
-.ema-android input[type="search"],
 .ema-android input[type="text"],
-.ema-android select {
-  min-height: 46px;
+.ema-android input[type="search"],
+.ema-android input[type="number"],
+.ema-android input[type="date"],
+.ema-android select,
+.ema-android textarea {
+  min-height: 48px;
   font-size: 16px;
+  border-radius: 12px;
 }
 
-.ema-android .quote-toolbar,
-.ema-android .seller-toolbar {
-  gap: 8px;
-  flex-wrap: wrap;
+.ema-android .tabs {
+  position: sticky;
+  top: 64px;
+  z-index: 70;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 7px;
+  margin: 0;
+  background: rgba(244, 247, 251, .96);
+  backdrop-filter: blur(9px);
 }
 
-.ema-android .quote-toolbar > *,
-.ema-android .seller-toolbar > * {
-  min-width: 0;
+.ema-android .tab {
+  min-height: 46px;
+  border-radius: 12px;
+  font-weight: 900;
 }
 
 .ema-android .invoice-wrap {
@@ -173,7 +164,7 @@ body.ema-android,
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
-  border-radius: 12px;
+  border-radius: 14px;
 }
 
 .ema-android .invoice {
@@ -190,12 +181,14 @@ body.ema-android,
 .ema-android .items th,
 .ema-android .items td {
   padding: 8px 6px;
-  font-size: 11px;
+  font-size: 10px;
 }
 
-.ema-android .items th:first-child,
 .ema-android .items td:first-child {
   width: 46%;
+  font-size: 11.5px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .ema-android .items th:nth-child(2),
@@ -213,56 +206,42 @@ body.ema-android,
   width: 20%;
 }
 
-.ema-android .items td:first-child {
-  font-size: 12px;
-  line-height: 1.25;
-  overflow-wrap: anywhere;
-}
-
 .ema-android .meta th,
 .ema-android .meta td {
   padding: 7px 6px;
   font-size: 10px;
 }
 
-.ema-android .invoice-preview-bg,
-.ema-android .seller-preview-bg,
-.ema-android .modal-bg {
-  padding: 8px;
-}
-
-.ema-android .invoice-preview-modal,
-.ema-android .modal {
-  width: 100%;
+.ema-android .modal,
+.ema-android .invoice-preview-modal {
+  width: calc(100vw - 18px);
   max-width: none;
-  max-height: calc(100dvh - 16px);
+  max-height: calc(100dvh - 20px);
   overflow: auto;
-  border-radius: 14px;
+  border-radius: 16px;
 }
 
 .ema-android .invoice-preview-frame {
+  max-height: 58dvh;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  max-height: 60dvh;
 }
 
-.ema-android .modal-actions,
-.ema-android .seller-preview-nav {
+.ema-android .modal-actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.ema-android .modal-actions .btn,
-.ema-android .seller-preview-nav .btn {
+.ema-android .modal-actions .btn {
   flex: 1 1 calc(50% - 8px);
+  min-height: 48px;
 }
 
 .ema-android .toast {
   left: 10px;
   right: 10px;
-  bottom: max(10px, env(safe-area-inset-bottom));
-  width: auto;
+  bottom: 96px;
   max-width: none;
 }
 
@@ -270,48 +249,80 @@ body.ema-android,
   display: none !important;
 }
 
-@media (max-width: 420px) {
-  .ema-android .brand-monogram {
-    display: none;
-  }
-
-  .ema-android .brand-name {
-    font-size: 12px;
-  }
-
-  .ema-android .brand-sub,
-  .ema-android .brand-meta {
-    font-size: 10px;
-  }
-
-  .ema-android .header-tools .btn {
-    padding-inline: 8px;
-    font-size: 11px;
-  }
-
-  .ema-android .items th,
-  .ema-android .items td {
-    font-size: 10px;
-  }
-
-  .ema-android .items td:first-child {
-    font-size: 11px;
-  }
+/* Barra inferior propia de Android */
+.ema-android .android-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 300;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 2px;
+  padding: 7px 6px max(7px, env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, .98);
+  border-top: 1px solid #dfe6ee;
+  box-shadow: 0 -6px 20px rgba(16, 24, 40, .08);
+  backdrop-filter: blur(12px);
 }
 
-@media (max-width: 360px) {
-  .ema-android .header-tools .btn {
-    font-size: 10px;
+.ema-android .android-nav button {
+  min-height: 58px;
+  border: 0;
+  background: transparent;
+  color: #61708a;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.ema-android .android-nav button .icon {
+  font-size: 21px;
+  line-height: 1;
+}
+
+.ema-android .android-nav button.active {
+  background: #eaf1ff;
+  color: var(--ema-blue);
+}
+
+.ema-android .android-nav button.primary {
+  background: var(--ema-blue);
+  color: #fff;
+  box-shadow: 0 5px 14px rgba(11, 78, 162, .28);
+}
+
+@media (max-width: 380px) {
+  .ema-android .brand-copy .brand-meta,
+  .ema-android .brand-copy .brand-sub {
+    display: none;
   }
 
   .ema-android .import-actions .btn,
   .ema-android .toolbar-left .btn,
-  .ema-android .toolbar-right .btn {
+  .ema-android .toolbar-right .btn,
+  .ema-android .quote-toolbar .btn,
+  .ema-android .seller-toolbar .btn {
     flex-basis: 100%;
+  }
+
+  .ema-android .items th,
+  .ema-android .items td {
+    font-size: 9px;
+  }
+
+  .ema-android .items td:first-child {
+    font-size: 10.5px;
   }
 }
 
 @media print {
+  .ema-android .android-nav,
   .ema-android .cod {
     display: none !important;
   }
