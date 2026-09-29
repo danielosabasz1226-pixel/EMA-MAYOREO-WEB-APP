@@ -198,18 +198,14 @@ public class MainActivity extends Activity {
     }
 
     private void loadHome(boolean fresh) {
-        if (fresh) {
-            webView.clearCache(true);
-            webView.clearHistory();
-            webView.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
-        }
+        webView.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT);
         webView.loadUrl(START_URL + "?v=20260929-3");
     }
 
     private void reloadFresh() {
         webView.clearCache(true);
         webView.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
-        webView.reload();
+        webView.loadUrl(START_URL + "?v=20260929-3");
     }
 
     private void goBack() {
