@@ -12,8 +12,8 @@ import android.util.Base64;
 import android.view.Gravity;
 import android.view.View;
 import android.webkit.CookieManager;
-import android.webkit.JavascriptInterface;
 import android.webkit.DownloadListener;
+import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -22,7 +22,6 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
-import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -30,8 +29,7 @@ import android.widget.Toast;
 public class MainActivity extends Activity {
     private static final int FILE_CHOOSER = 4101;
     private static final int SAVE_DOCUMENT = 4102;
-    private static final String HOME_URL =
-        "file:///android_asset/ema/index.html";
+    private static final String HOME_URL = "file:///android_asset/ema/index.html";
 
     private WebView webView;
     private WebView printWebView;
@@ -39,6 +37,9 @@ public class MainActivity extends Activity {
 
     private byte[] pendingSaveBytes;
     private String pendingSaveMime = "application/octet-stream";
+
+    private LinearLayout bottomBar;
+    private TextView screenTitle;
 
     private int dp(float value) {
         return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
@@ -48,55 +49,100 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        getWindow().setStatusBarColor(Color.rgb(8, 55, 112));
+        getWindow().setStatusBarColor(Color.rgb(7, 54, 111));
         getWindow().setNavigationBarColor(Color.WHITE);
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.WHITE);
+        root.setBackgroundColor(Color.rgb(244, 247, 251));
 
-        LinearLayout toolbar = new LinearLayout(this);
-        toolbar.setOrientation(LinearLayout.HORIZONTAL);
-        toolbar.setGravity(Gravity.CENTER_VERTICAL);
-        toolbar.setPadding(dp(5), dp(3), dp(5), dp(3));
-        toolbar.setBackgroundColor(Color.rgb(11, 78, 162));
+        LinearLayout appBar = new LinearLayout(this);
+        appBar.setGravity(Gravity.CENTER_VERTICAL);
+        appBar.setPadding(dp(12), dp(4), dp(8), dp(4));
+        appBar.setBackgroundColor(Color.rgb(11, 78, 162));
 
-        Button back = makeButton("←");
-        Button home = makeButton("⌂");
-        Button reload = makeButton("⟳");
+        TextView logo = new TextView(this);
+        logo.setText("EMA");
+        logo.setTextColor(Color.WHITE);
+        logo.setTextSize(20);
+        logo.setTypeface(null, android.graphics.Typeface.BOLD);
 
-        TextView title = new TextView(this);
-        title.setText("EMA");
-        title.setTextColor(Color.WHITE);
-        title.setTextSize(18);
-        title.setGravity(Gravity.CENTER);
-        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        screenTitle = new TextView(this);
+        screenTitle.setText("Inicio");
+        screenTitle.setTextColor(Color.WHITE);
+        screenTitle.setTextSize(15);
+        screenTitle.setGravity(Gravity.CENTER_VERTICAL);
 
-        toolbar.addView(back, new LinearLayout.LayoutParams(dp(52), dp(48)));
-        toolbar.addView(title, new LinearLayout.LayoutParams(0, dp(48), 1f));
-        toolbar.addView(home, new LinearLayout.LayoutParams(dp(52), dp(48)));
-        toolbar.addView(reload, new LinearLayout.LayoutParams(dp(52), dp(48)));
+        Button refresh = headerButton("↻");
+        Button back = headerButton("‹");
 
-        root.addView(toolbar, new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, dp(54)
+        appBar.addView(logo, new LinearLayout.LayoutParams(dp(58), dp(50)));
+        appBar.addView(screenTitle, new LinearLayout.LayoutParams(0, dp(50), 1f));
+        appBar.addView(back, new LinearLayout.LayoutParams(dp(48), dp(50)));
+        appBar.addView(refresh, new LinearLayout.LayoutParams(dp(48), dp(50)));
+
+        root.addView(appBar, new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            dp(58)
         ));
 
         webView = new WebView(this);
         configureWebView(webView);
+        webView.addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
 
         root.addView(webView, new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
         ));
 
+        bottomBar = new LinearLayout(this);
+        bottomBar.setGravity(Gravity.CENTER);
+        bottomBar.setPadding(dp(6), dp(5), dp(6), dp(5));
+        bottomBar.setBackgroundColor(Color.WHITE);
+        root.addView(bottomBar, new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            dp(72)
+        ));
+
         setContentView(root);
 
-        webView.addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
+        addNav("⌂", "Inicio", false, v -> home());
+        addNav("+", "Pedido", true, v -> newOrder());
+        addNav("▣", "Excel", false, v -> importExcel());
+        addNav("◷", "Historial", false, v -> history());
+        addNav("⋯", "Más", false, v -> moreMenu());
 
+        refresh.setOnClickListener(v -> reloadFresh());
         back.setOnClickListener(v -> handleBack());
-        home.setOnClickListener(v -> loadHome());
-        reload.setOnClickListener(v -> reloadFresh());
 
         loadHome();
+    }
+
+    private Button headerButton(String text) {
+        Button b = new Button(this);
+        b.setText(text);
+        b.setTextColor(Color.WHITE);
+        b.setTextSize(24);
+        b.setAllCaps(false);
+        b.setMinHeight(0);
+        b.setMinWidth(0);
+        b.setPadding(0, 0, 0, 0);
+        b.setBackgroundColor(Color.TRANSPARENT);
+        return b;
+    }
+
+    private void addNav(String icon, String label, boolean primary, View.OnClickListener listener) {
+        Button b = new Button(this);
+        b.setAllCaps(false);
+        b.setMinHeight(0);
+        b.setMinWidth(0);
+        b.setText(icon + "\n" + label);
+        b.setTextSize(11);
+        b.setGravity(Gravity.CENTER);
+        b.setTextColor(primary ? Color.WHITE : Color.rgb(97, 112, 138));
+        b.setPadding(0, dp(4), 0, dp(4));
+        b.setBackgroundColor(primary ? Color.rgb(11, 78, 162) : Color.TRANSPARENT);
+        b.setOnClickListener(listener);
+        bottomBar.addView(b, new LinearLayout.LayoutParams(0, dp(60), 1f));
     }
 
     private void configureWebView(WebView view) {
@@ -118,7 +164,7 @@ public class MainActivity extends Activity {
 
         CookieManager.getInstance().setAcceptCookie(true);
 
-        view.setBackgroundColor(Color.WHITE);
+        view.setBackgroundColor(Color.TRANSPARENT);
         view.setOverScrollMode(View.OVER_SCROLL_NEVER);
         view.setVerticalScrollBarEnabled(false);
         view.setHorizontalScrollBarEnabled(false);
@@ -127,23 +173,21 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 view.evaluateJavascript(
-                    "(function(){document.documentElement.classList.add('ema-android');" +
-                    "document.body.classList.add('ema-android');" +
-                    "document.querySelectorAll('.cod').forEach(function(e){e.remove();});})();",
+                    "(function(){" +
+                    "document.documentElement.classList.add('ema-android');" +
+                    "if(document.body) document.body.classList.add('ema-android');" +
+                    "document.querySelectorAll('.cod').forEach(function(e){e.remove();});" +
+                    "})();",
                     null
                 );
             }
 
             @Override
-            public void onReceivedError(
-                WebView view,
-                WebResourceRequest request,
-                WebResourceError error
-            ) {
+            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (request == null || request.isForMainFrame()) {
                     Toast.makeText(
                         MainActivity.this,
-                        "EMA tuvo un problema al cargar. Pulsa ⟳ para actualizar.",
+                        "No se pudo cargar EMA. Pulsa ↻ para reintentar.",
                         Toast.LENGTH_SHORT
                     ).show();
                 }
@@ -171,10 +215,12 @@ public class MainActivity extends Activity {
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     "application/vnd.ms-excel.sheet.macroEnabled.12",
                     "text/csv",
-                    "text/html",
                     "application/octet-stream"
                 });
-                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+                intent.addFlags(
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION |
+                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                );
 
                 try {
                     startActivityForResult(intent, FILE_CHOOSER);
@@ -182,11 +228,12 @@ public class MainActivity extends Activity {
                     fileCallback = null;
                     Toast.makeText(
                         MainActivity.this,
-                        "No se pudo abrir el selector de archivos.",
+                        "No se pudo abrir Excel.",
                         Toast.LENGTH_LONG
                     ).show();
                     return false;
                 }
+
                 return true;
             }
         });
@@ -205,37 +252,92 @@ public class MainActivity extends Activity {
                 } catch (Exception ignored) {
                     Toast.makeText(
                         MainActivity.this,
-                        "Usa la opción Guardar cuando EMA la muestre.",
-                        Toast.LENGTH_LONG
+                        "Usa Guardar desde EMA.",
+                        Toast.LENGTH_SHORT
                     ).show();
                 }
             }
         });
     }
 
-    private Button makeButton(String text) {
-        Button button = new Button(this);
-        button.setText(text);
-        button.setTextColor(Color.WHITE);
-        button.setTextSize(20);
-        button.setAllCaps(false);
-        button.setMinHeight(0);
-        button.setMinWidth(0);
-        button.setPadding(0, 0, 0, 0);
-        button.setGravity(Gravity.CENTER);
-        button.setBackgroundColor(Color.TRANSPARENT);
-        return button;
+    private void js(String code) {
+        if (webView == null) return;
+        webView.evaluateJavascript(
+            "(function(){try{return (" + code + ");}catch(e){return false;}})();",
+            null
+        );
+    }
+
+    private void setTitle(String value) {
+        if (screenTitle != null) screenTitle.setText(value);
+    }
+
+    private void home() {
+        setTitle("Inicio");
+        js("window.EMAAndroid?.scrollTop()");
+        webView.loadUrl(HOME_URL + "?v=android-1.4");
+    }
+
+    private void newOrder() {
+        setTitle("Nuevo pedido");
+        js("window.EMAAndroid?.newOrder()");
+    }
+
+    private void importExcel() {
+        setTitle("Importar Excel");
+        js("window.EMAAndroid?.openImport()");
+    }
+
+    private void history() {
+        setTitle("Historial");
+        js("window.EMAAndroid?.history()");
+    }
+
+    private void moreMenu() {
+        final String[] options = {
+            "Imprimir",
+            "Clientes",
+            "Vendedores",
+            "Actualizar",
+            "Inicio"
+        };
+
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Más opciones")
+            .setItems(options, (dialog, which) -> {
+                switch (which) {
+                    case 0:
+                        setTitle("Imprimir");
+                        js("window.EMAAndroid?.print()");
+                        break;
+                    case 1:
+                        setTitle("Clientes");
+                        js("window.EMAAndroid?.customers()");
+                        break;
+                    case 2:
+                        setTitle("Vendedores");
+                        js("window.EMAAndroid?.sellers()");
+                        break;
+                    case 3:
+                        reloadFresh();
+                        break;
+                    default:
+                        home();
+                        break;
+                }
+            })
+            .show();
     }
 
     private void loadHome() {
         webView.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT);
-        webView.loadUrl(HOME_URL + "?v=1.3.0");
+        webView.loadUrl(HOME_URL + "?v=android-1.4");
     }
 
     private void reloadFresh() {
         webView.clearCache(true);
         webView.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
-        webView.loadUrl(HOME_URL + "?v=1.3.0");
+        webView.loadUrl(HOME_URL + "?v=android-1.4");
     }
 
     private void handleBack() {
@@ -268,21 +370,17 @@ public class MainActivity extends Activity {
             pendingSaveBytes = null;
             Toast.makeText(
                 this,
-                "No se pudo abrir Guardar archivo.",
+                "No se pudo abrir Guardar.",
                 Toast.LENGTH_LONG
             ).show();
         }
     }
 
     private void printHtmlNative(String html) {
-        if (html == null || html.isEmpty()) {
-            Toast.makeText(this, "No hay contenido para imprimir.", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        if (html == null || html.isEmpty()) return;
 
         if (printWebView != null) {
             printWebView.destroy();
-            printWebView = null;
         }
 
         printWebView = new WebView(this);
@@ -297,7 +395,7 @@ public class MainActivity extends Activity {
                 if (printManager == null) {
                     Toast.makeText(
                         MainActivity.this,
-                        "La impresión no está disponible en este teléfono.",
+                        "Impresión no disponible en este teléfono.",
                         Toast.LENGTH_LONG
                     ).show();
                     return;
@@ -381,14 +479,9 @@ public class MainActivity extends Activity {
 
         if (requestCode == SAVE_DOCUMENT) {
             if (resultCode == RESULT_OK && data != null && data.getData() != null && pendingSaveBytes != null) {
-                Uri uri = data.getData();
-
                 try {
-                    android.content.res.AssetFileDescriptor afd = null;
-                    java.io.OutputStream output = getContentResolver().openOutputStream(uri);
-                    if (output == null) {
-                        throw new IllegalStateException("No se pudo abrir el destino.");
-                    }
+                    java.io.OutputStream output = getContentResolver().openOutputStream(data.getData());
+                    if (output == null) throw new IllegalStateException("destino nulo");
                     try {
                         output.write(pendingSaveBytes);
                         output.flush();
@@ -398,7 +491,7 @@ public class MainActivity extends Activity {
 
                     Toast.makeText(
                         this,
-                        "Archivo guardado correctamente.",
+                        "Archivo guardado.",
                         Toast.LENGTH_SHORT
                     ).show();
                 } catch (Exception error) {
