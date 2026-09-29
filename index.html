@@ -38,7 +38,7 @@ body{margin:0;background:#f6f8fb;color:#101828;font-family:Arial,Segoe UI,sans-s
     const cleanProductText = (value) => {
       if (typeof value !== 'string') return value;
       let text = value.replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
-      text = text.replace(/\s+Cód\.?\s*CBC\s*[-–—:]?\s*[^|;\n]*?\.[A-Z]{1,5}\d{4,}\s*$/i, '');
+      text = text.replace(/(?:^|\s)Cód\.?\s*CBC\s*[-–—:]?\s*[^|;\n]*?\.[A-Z]{1,5}\d{4,}\s*$/i, '');
       text = text.replace(/\s*[-–—]\s*[^|;\n]*?\.[A-Z]{1,5}\d{4,}\s*$/i, '');
       text = text.replace(/\s*\(\s*[A-Z]{1,5}\d{4,}\s*\)\s*$/i, '');
       text = text.replace(/\s*\(?[A-Z]{1,5}\d{4,}\)?\s*$/i, '');
