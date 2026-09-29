@@ -49,6 +49,7 @@ jobs:
 
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           p = Path("site/app.js")
           s = p.read_text(encoding="utf-8")
@@ -63,11 +64,41 @@ jobs:
               "codigo: '',"
           )
 
-          line = '        ${item.codigo ? `<span class="cod">Cód. ${esc(item.codigo)}</span>` : ''}'
-          if line not in s:
-              raise SystemExit("No encontré la línea exacta del código secundario.")
+          s, removed = re.subn(
+              r'^\s*\${item\.codigo \? .*?class="cod".*?\}\s*
+          p.write_text(s, encoding="utf-8")
 
-          s = s.replace(line, "", 1)
+          css = Path("site/styles.css")
+          c = css.read_text(encoding="utf-8")
+          if ".cod { display: none !important; }" not in c:
+              c += "\n.cod { display:none !important; }\n"
+          css.write_text(c, encoding="utf-8")
+          PY
+
+          node --check site/app.js
+          test -s site/index.html
+          test -s site/app.js
+          test -s site/styles.css
+
+      - name: Configurar Pages
+        uses: actions/configure-pages@v5
+
+      - name: Subir sitio
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Publicar sitio
+        id: deployment
+        uses: actions/deploy-pages@v4
+,
+              '',
+              s,
+              count=1,
+              flags=re.MULTILINE
+          )
+          if removed != 1:
+              raise SystemExit("No encontré el renglón del código secundario.")
 
           p.write_text(s, encoding="utf-8")
 
