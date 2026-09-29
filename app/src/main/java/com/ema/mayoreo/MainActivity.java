@@ -384,13 +384,17 @@ public class MainActivity extends Activity {
                 Uri uri = data.getData();
 
                 try {
-                    getContentResolver().openOutputStream(uri).use(output -> {
-                        if (output == null) {
-                            throw new IllegalStateException("No se pudo abrir el destino.");
-                        }
+                    android.content.res.AssetFileDescriptor afd = null;
+                    java.io.OutputStream output = getContentResolver().openOutputStream(uri);
+                    if (output == null) {
+                        throw new IllegalStateException("No se pudo abrir el destino.");
+                    }
+                    try {
                         output.write(pendingSaveBytes);
                         output.flush();
-                    });
+                    } finally {
+                        output.close();
+                    }
 
                     Toast.makeText(
                         this,
