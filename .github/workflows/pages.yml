@@ -1,4 +1,4 @@
-name: Publicar EMA en GitHub Pages
+name: Publicar EMA rápido en GitHub Pages
 
 on:
   push:
@@ -17,27 +17,281 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Descargar repositorio
         uses: actions/checkout@v4
 
-      - name: Preparar sitio EMA
+      - name: Extraer aplicación EMA directamente
         shell: bash
         run: |
           set -euo pipefail
-          ZIP="$(find . -maxdepth 1 -type f -name '*.zip' -print -quit)"
+
+          ZIP="$(find . -maxdepth 1 -type f -iname '*EMA-MAYOREO-WEB*.zip' -print -quit)"
           test -n "$ZIP"
 
-          rm -rf site
-          mkdir -p site
+          rm -rf extracted site
+          mkdir -p extracted site
+          unzip -q "$ZIP" -d extracted
 
-          cp index.html site/index.html
-          cp "$ZIP" "site/EMA-MAYOREO-WEB-12.0-FORMATO-IMPRESION-PRO-LETRAS-GRANDES (2).zip"
+          INDEX="$(find extracted -type f -name 'index.html' -print -quit)"
+          test -n "$INDEX"
+
+          APP_DIR="$(dirname "$INDEX")"
+          cp -a "$APP_DIR"/. site/
 
           test -f site/index.html
-          test -s "site/EMA-MAYOREO-WEB-12.0-FORMATO-IMPRESION-PRO-LETRAS-GRANDES (2).zip"
+          test -f site/app.js
+          test -f site/styles.css
 
-      - name: Subir artefacto de Pages
+          rm -f site/ABRIR-EMA.bat
+          find site -name '.DS_Store' -delete
+
+      - name: Quitar códigos de productos y optimizar móvil
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          index = Path("site/index.html")
+          html = index.read_text(encoding="utf-8")
+
+          cleanup = r"""
+<script>
+(() => {
+  'use strict';
+
+  const cleanProductText = (value) => {
+    if (typeof value !== 'string') return value;
+    let text = value.replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
+
+    text = text.replace(/(?:^|\s)C[oó]d\.?\s*CBC\s*[-–—:]?\s*[^|;\n]*?\.[A-Z]{1,8}\d{4,}\s*$/i, '');
+    text = text.replace(/\s*[-–—]\s*[^|;\n]*?\.[A-Z]{1,8}\d{4,}\s*$/i, '');
+    text = text.replace(/\s*\(\s*[A-Z]{1,8}\d{4,}\s*\)\s*$/i, '');
+    text = text.replace(/\s*\(?[A-Z]{1,8}\d{4,}\)?\s*$/i, '');
+
+    return text.replace(/\s{2,}/g, ' ').trim();
+  };
+
+  const sanitizeObject = (quote) => {
+    if (!quote || !Array.isArray(quote.items)) return quote;
+    quote.items.forEach(item => {
+      item.codigo = '';
+      item.code = '';
+      item.codigoProducto = '';
+      item.descripcion = cleanProductText(item.descripcion || item.name || '');
+      if ('name' in item) item.name = item.descripcion;
+    });
+    return quote;
+  };
+
+  const sanitizeState = () => {
+    try {
+      if (typeof state === 'undefined') return;
+
+      if (Array.isArray(state.quotes)) {
+        state.quotes.forEach(sanitizeObject);
+      }
+
+      if (Array.isArray(state.importHistory)) {
+        state.importHistory.forEach(entry => {
+          if (Array.isArray(entry.preview)) entry.preview.forEach(sanitizeObject);
+          if (Array.isArray(entry.quotes)) entry.quotes.forEach(sanitizeObject);
+        });
+      }
+
+      if (typeof saveState === 'function') saveState();
+    } catch (e) {
+      console.warn('EMA: no se pudo limpiar el estado.', e);
+    }
+  };
+
+  const hideCodeElements = () => {
+    document.querySelectorAll('.cod,[class*="codigo"],[class*="code"]').forEach(el => {
+      if (el.closest('.brand,[data-no-code]')) return;
+      el.remove();
+    });
+  };
+
+  const cleanVisibleText = () => {
+    document.querySelectorAll('.items td:first-child, .items td:first-child *').forEach(el => {
+      if (el.children.length === 0 && el.textContent) {
+        el.textContent = cleanProductText(el.textContent);
+      }
+    });
+    hideCodeElements();
+  };
+
+  const protectExcelImport = () => {
+    try {
+      if (!window.XLSX || typeof window.XLSX.read !== 'function' || window.XLSX.read.__emaSafe) return;
+
+      const originalRead = window.XLSX.read;
+      const safeRead = function(data, opts) {
+        const wb = originalRead.call(this, data, opts);
+
+        try {
+          for (const sheetName of (wb.SheetNames || [])) {
+            const ws = wb.Sheets?.[sheetName];
+            if (!ws) continue;
+
+            for (const key of Object.keys(ws)) {
+              if (key.startsWith('!')) continue;
+              const cell = ws[key];
+              if (!cell || typeof cell !== 'object') continue;
+              if (typeof cell.v === 'string') cell.v = cleanProductText(cell.v);
+              if (typeof cell.w === 'string') cell.w = cleanProductText(cell.w);
+            }
+          }
+        } catch (e) {
+          console.warn('EMA: no se pudo limpiar el Excel.', e);
+        }
+
+        return wb;
+      };
+
+      safeRead.__emaSafe = true;
+      window.XLSX.read = safeRead;
+    } catch (e) {
+      console.warn('EMA: XLSX no disponible todavía.', e);
+    }
+  };
+
+  const protectApp = () => {
+    protectExcelImport();
+    sanitizeState();
+
+    try {
+      if (typeof renderQuote === 'function' && !renderQuote.__emaSafe) {
+        const originalRender = renderQuote;
+        const safeRender = function() {
+          sanitizeState();
+          const result = originalRender.apply(this, arguments);
+          setTimeout(cleanVisibleText, 0);
+          return result;
+        };
+        safeRender.__emaSafe = true;
+        renderQuote = safeRender;
+      }
+
+      if (typeof exportPdf === 'function' && !exportPdf.__emaSafe) {
+        const originalPdf = exportPdf;
+        const safePdf = function(quote) {
+          sanitizeState();
+          return originalPdf.call(this, sanitizeObject(quote));
+        };
+        safePdf.__emaSafe = true;
+        exportPdf = safePdf;
+      }
+    } catch (e) {
+      console.warn('EMA: no se pudieron proteger las acciones.', e);
+    }
+
+    cleanVisibleText();
+  };
+
+  const style = document.createElement('style');
+  style.textContent = `
+    .cod { display: none !important; }
+    @media (max-width: 640px) {
+      html, body {
+        -webkit-text-size-adjust: 100%;
+        overscroll-behavior-x: none;
+      }
+      body { overflow-x: hidden; }
+      .invoice-wrap {
+        width: 100% !important;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .invoice {
+        width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box;
+      }
+      .items {
+        width: 100% !important;
+        table-layout: fixed;
+      }
+      .items td, .items th {
+        padding: 7px 6px !important;
+      }
+      .items td:first-child {
+        font-size: 1.04em;
+        line-height: 1.25;
+      }
+      .btn {
+        min-height: 44px;
+      }
+    }
+    @media print {
+      .cod { display: none !important; }
+    }
+  `;
+  document.head.appendChild(style);
+
+  const observer = new MutationObserver(() => {
+    protectApp();
+  });
+
+  const start = () => {
+    protectApp();
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    setTimeout(protectApp, 250);
+    setTimeout(protectApp, 1000);
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+  } else {
+    start();
+  }
+})();
+</script>
+"""
+
+          if "cleanProductText" not in html:
+              html = html.replace("</body>", cleanup + "
+</body>")
+
+          # Evita el zoom automático del navegador y mejora el inicio en móvil.
+          if 'name="viewport"' in html:
+              html = html.replace(
+                  '<meta name="viewport" content="width=device-width,initial-scale=1">',
+                  '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
+              )
+
+          index.write_text(html, encoding="utf-8")
+
+          css = Path("site/styles.css")
+          c = css.read_text(encoding="utf-8")
+          extra = r'''
+          html { -webkit-text-size-adjust: 100%; }
+          .cod { display: none !important; }
+          @media (max-width: 640px) {
+            body { overflow-x: hidden; }
+            .invoice-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .invoice { width: 100%; min-width: 0; box-sizing: border-box; }
+            .items { width: 100%; table-layout: fixed; }
+            .items td, .items th { padding: 7px 6px; }
+            .btn { min-height: 44px; }
+          }
+          @media print {
+            .cod { display: none !important; }
+          }
+          '''
+          if ".cod { display: none !important; }" not in c:
+              c += extra
+          css.write_text(c, encoding="utf-8")
+          PY
+
+          test -s site/index.html
+          test -s site/app.js
+          test -s site/styles.css
+
+      - name: Subir sitio
         uses: actions/upload-pages-artifact@v3
         with:
           path: site
