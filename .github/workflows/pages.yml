@@ -44,6 +44,115 @@ jobs:
           rm -f site/ABRIR-EMA.bat
           find site -name '.DS_Store' -delete
 
+      - name: Corregir códigos y mejorar móvil
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          app = Path("site/app.js")
+          s = app.read_text(encoding="utf-8")
+
+          s = s.replace("const DB_VERSION = 1;", "const DB_VERSION = 2;")
+          s = s.replace("codigo: item.code, descripcion: item.name,", "codigo: '', descripcion: item.name,")
+          s = s.replace(
+              "codigo: cleanText(item.codigo),\n          descripcion: cleanText(item.descripcion),",
+              "// El código de producto no se muestra ni se conserva en la interfaz.\n          codigo: '',\n          descripcion: cleanText(item.descripcion),"
+          )
+
+          bt = chr(96)
+          dl = chr(36)
+          start = s.find("function formatItemRows(quote) {")
+          end = s.find("function invoice(quote)", start)
+          if start >= 0 and end >= 0:
+              new_block = (
+                  "function formatItemRows(quote) {\n"
+                  "  return quote.items.map((item) => " + bt + "\n"
+                  "    <tr>\n"
+                  "      <td>" + dl + "{esc(item.descripcion || '—')}</td>\n"
+                  "      <td class=\"num\">" + dl + "{Number(item.cantidad || 0).toLocaleString('es-GT', { maximumFractionDigits: 2 })}</td>\n"
+                  "      <td class=\"num\">" + dl + "{money(item.precio)}</td>\n"
+                  "      <td class=\"num\">" + dl + "{money(item.total)}</td>\n"
+                  "    </tr>" + bt + ").join('');\n"
+                  "}\n"
+              )
+              s = s[:start] + new_block + s[end:]
+
+          app.write_text(s, encoding="utf-8")
+
+          css = Path("site/styles.css")
+          c = css.read_text(encoding="utf-8")
+          mobile = r'''
+          /* =========================================================
+             MEJORAS MÓVILES EMA
+          ========================================================= */
+          html, body {
+            -webkit-text-size-adjust: 100%;
+            overscroll-behavior-x: none;
+          }
+          .cod { display: none !important; }
+          button, select, input { -webkit-tap-highlight-color: transparent; }
+          @media (max-width: 640px) {
+            body { overflow-x: hidden; }
+            .topbar { gap: 12px; }
+            .brand-block, .brand-copy { min-width: 0; }
+            .brand-name, .brand-sub, .brand-meta { overflow-wrap: anywhere; }
+            .tabs {
+              position: sticky;
+              top: 0;
+              z-index: 40;
+              background: rgba(255,255,255,.96);
+              backdrop-filter: blur(8px);
+            }
+            .toolbar-left, .toolbar-right {
+              display: flex;
+              flex-wrap: nowrap;
+              gap: 8px;
+              overflow-x: auto;
+              padding-bottom: 4px;
+              -webkit-overflow-scrolling: touch;
+            }
+            .toolbar-left > *, .toolbar-right > * { flex: 0 0 auto; }
+            .toolbar-left .btn, .toolbar-right .btn {
+              min-height: 44px;
+              white-space: nowrap;
+            }
+            .jump { min-width: 180px; flex: 0 0 auto; }
+            .import-actions .btn { min-height: 48px; }
+            .invoice-wrap {
+              width: 100%;
+              overflow-x: auto;
+              padding-bottom: 4px;
+              -webkit-overflow-scrolling: touch;
+            }
+            .invoice {
+              width: 100%;
+              min-width: 0;
+              box-sizing: border-box;
+            }
+            .items { table-layout: fixed; width: 100%; }
+            .items th:nth-child(n+2), .items td:nth-child(n+2) { white-space: nowrap; }
+            .meta, .items { font-size: 10px; }
+            .meta th, .meta td, .items th, .items td { padding: 7px 6px; }
+            .btn { min-height: 44px; }
+            .toast {
+              max-width: calc(100vw - 24px);
+              left: 12px;
+              right: 12px;
+              bottom: 12px;
+            }
+          }
+          '''
+          if "MEJORAS MÓVILES EMA" not in c:
+              c += mobile
+          css.write_text(c, encoding="utf-8")
+          PY
+
+          node --check site/app.js
+          test -f site/styles.css
+
+
       - name: Subir artefacto de Pages
         uses: actions/upload-pages-artifact@v3
         with:
