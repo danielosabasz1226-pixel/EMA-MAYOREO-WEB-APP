@@ -64,39 +64,8 @@ jobs:
               "codigo: '',"
           )
 
-          s, removed = re.subn(
-              r'^\s*\${item\.codigo \? .*?class="cod".*?\}\s*
-          p.write_text(s, encoding="utf-8")
-
-          css = Path("site/styles.css")
-          c = css.read_text(encoding="utf-8")
-          if ".cod { display: none !important; }" not in c:
-              c += "\n.cod { display:none !important; }\n"
-          css.write_text(c, encoding="utf-8")
-          PY
-
-          node --check site/app.js
-          test -s site/index.html
-          test -s site/app.js
-          test -s site/styles.css
-
-      - name: Configurar Pages
-        uses: actions/configure-pages@v5
-
-      - name: Subir sitio
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
-
-      - name: Publicar sitio
-        id: deployment
-        uses: actions/deploy-pages@v4
-,
-              '',
-              s,
-              count=1,
-              flags=re.MULTILINE
-          )
+          pattern = r'^\s*\$\{item\.codigo.*class="cod".*\}\s*$'
+          s, removed = re.subn(pattern, '', s, count=1, flags=re.MULTILINE)
           if removed != 1:
               raise SystemExit("No encontré el renglón del código secundario.")
 
