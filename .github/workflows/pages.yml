@@ -54,7 +54,7 @@ jobs:
           app = Path("site/app.js")
           s = app.read_text(encoding="utf-8")
 
-          helper = """
+          helper = r"""
 function cleanProductDescription(value) {
   let text = cleanText(value);
   if (!text) return '';
